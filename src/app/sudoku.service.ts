@@ -69,7 +69,7 @@ export class SudokuService {
       this.helperArr[i] = [];
 
       for (let j = 0; j < 9; j++) {
-        if (this.puzzle[i][j] == 0) {
+        if (this.puzzle[i][j] != 0) {
           this.helperArr[i].push([]);
         } else {
           this.helperArr[i].push([
@@ -211,8 +211,7 @@ export class SudokuService {
           font = 'blue';
           this.runningSolved[row][col] = val;
           this.unfilledCellsCount--;
-          this.helperArr[row][col] = [];
-          this.fillPencil();
+          this.updateFill(row, col);
         }
         this.sendNumber(cellLoc, font, this.isPencilClicked, val);
       } else {
@@ -260,19 +259,41 @@ export class SudokuService {
   fillPencil(): void {
     for (let i = 0; i < 9; i++) {
       for (let j = 0; j < 9; j++) {
-        this.helperArr[i][j] = [];
-        if (this.runningSolved[i][j] != this.solved[i][j]) {
-          for (let num = 1; num <= 9; num++) {
-            if (this.check(this.runningSolved, i, j, num, false)) {
-              this.helperArr[i][j].push(true);
-            } else {
-              this.helperArr[i][j].push(false);
-            }
+        if (this.helperArr[i][j].length == 0) continue;
+        for (let num = 1; num <= 9; num++) {
+          if (this.check(this.runningSolved, i, j, num, false)) {
+            this.helperArr[i][j][num - 1] = true;
+          } else {
+            this.helperArr[i][j][num - 1] = false;
           }
         }
       }
     }
     this.helperSubject.next(true);
+  }
+
+  updateFill(row: number, col: number): void {
+    this.helperArr[row][col] = [];
+    const val = this.runningSolved[row][col];
+    for (let i = 0; i < 9; i++) {
+      if (this.helperArr[row][i].length != 0) {
+        this.helperArr[row][i][val - 1] = false;
+      }
+    }
+    for (let i = 0; i < 9; i++) {
+      if (this.helperArr[i][col].length != 0) {
+        this.helperArr[i][col][val - 1] = false;
+      }
+    }
+    row = Math.floor(row / 3);
+    col = Math.floor(col / 3);
+    for (let i = row * 3; i < row * 3 + 3; i++) {
+      for (let j = col * 3; j < col * 3 + 3; j++) {
+        if (this.helperArr[i][col].length != 0) {
+          this.helperArr[i][j][val - 1] = false;
+        }
+      }
+    }
   }
 
   clearPencil(): void {
