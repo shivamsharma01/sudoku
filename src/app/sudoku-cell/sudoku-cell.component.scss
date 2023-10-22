@@ -1,0 +1,76 @@
+#cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: solid;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
+
+#filled {
+  background-color: bisque;
+  font-size: 2rem;
+}
+
+#filled,
+#empty {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+#empty {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+#empty > div {
+  color: black;
+  text-decoration: solid;
+  flex-grow: 1;
+  width: 33%;
+}
+
+@keyframes text-zoom {
+  0% {
+    font-size: 2rem;
+  }
+  10% {
+    font-size: 3rem;
+  }
+  20% {
+    font-size: 2rem;
+  }
+  30% {
+    font-size: 1.5rem;
+  }
+  40% {
+    font-size: 2rem;
+  }
+  50% {
+    font-size: 3rem;
+  }
+  60% {
+    font-size: 2rem;
+  }
+  70% {
+    font-size: 1.5rem;
+  }
+  80% {
+    font-size: 2rem;
+  }
+  90% {
+    font-size: 3rem;
+  }
+  100% {
+    font-size: 2rem;
+  }
+}
+
+.zoom {
+  animation-name: text-zoom;
+  animation-duration: 4s;
+}

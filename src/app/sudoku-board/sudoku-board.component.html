@@ -1,0 +1,24 @@
+<div id="board">
+  <div
+    *ngFor="let i1 of [1, 2, 3, 4, 5, 6, 7, 8, 9]; index as idx1"
+    id="row-{{ idx1 + 1 }}"
+  >
+    <sudoku-cell
+      *ngFor="let i2 of [1, 2, 3, 4, 5, 6, 7, 8, 9]; index as idx2"
+      [num]="runningPuzzle[idx1][idx2]"
+      cellLocation="{{ idx1 }}:{{ idx2 }}"
+    ></sudoku-cell>
+  </div>
+</div>
+<div id="button-holder">
+  <button
+    id="pencil"
+    (click)="clickButton()"
+    [ngStyle]="isPencilClicked && { 'background-color': 'blue' }"
+  >
+    Pencil
+  </button>
+  <button id="fillPencil" (click)="fillPencil()">Fill Pencil</button>
+  <button id="fillPencil" (click)="clearPencil()">Clear Pencil</button>
+  <button id="hint" (click)="hint()">Hint</button>
+</div>

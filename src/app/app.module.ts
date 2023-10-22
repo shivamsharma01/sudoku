@@ -3,10 +3,14 @@ import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { SudokuCellComponent } from './sudoku-cell/sudoku-cell.component';
+import { SudokuBoardComponent } from './sudoku-board/sudoku-board.component';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    SudokuCellComponent,
+    SudokuBoardComponent
   ],
   imports: [
     BrowserModule,

@@ -1,0 +1,19 @@
+<div id="cell" (click)="saveState()">
+  <div
+    id="filled"
+    *ngIf="cellNum != 0; else elseBlock"
+    [ngStyle]="{
+      color: font
+    }"
+    [ngClass]="{ zoom: isZoom }"
+  >
+    {{ cellNum }}
+  </div>
+  <ng-template #elseBlock>
+    <div id="empty" [ngStyle]="clickState && { 'background-color': 'blue' }">
+      <div *ngFor="let v of helperArr; index as i">
+        {{ v == true ? i + 1 : "" }}
+      </div>
+    </div>
+  </ng-template>
+</div>
