@@ -2,15 +2,29 @@
   <div
     id="filled"
     *ngIf="cellNum != 0; else elseBlock"
-    [ngStyle]="{
-      color: font
-    }"
     [ngClass]="{ zoom: isZoom }"
+    [ngStyle]="{
+      color:
+        !puzzle || puzzle[row][col] == cellNum
+          ? 'black'
+          : !runningSolved || runningSolved[row][col] == cellNum
+          ? 'blue'
+          : 'red',
+      backgroundColor: isSelected
+        ? 'rgba(0,0,255, 0.5)'
+        : isError
+        ? 'rgba(255,0,0, 0.5)'
+        : isNum
+        ? 'rgba(0,0,255, 0.5)'
+        : !puzzle || puzzle[row][col] == cellNum
+        ? 'bisque'
+        : 'white'
+    }"
   >
     {{ cellNum }}
   </div>
   <ng-template #elseBlock>
-    <div id="empty" [ngStyle]="clickState && { 'background-color': 'blue' }">
+    <div id="empty" [ngStyle]="isSelected && { 'background-color': 'blue' }">
       <div *ngFor="let v of helperArr; index as i">
         {{ v == true ? i + 1 : "" }}
       </div>

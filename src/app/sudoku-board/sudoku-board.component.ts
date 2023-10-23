@@ -11,7 +11,6 @@ import { SudokuService } from '../sudoku.service';
 export class SudokuBoardComponent implements OnInit, OnDestroy {
   puzzle: number[][];
   runningPuzzle: number[][];
-  clickedCell: string;
   isPencilClicked: boolean;
   subscription: Subscription;
 
@@ -21,10 +20,6 @@ export class SudokuBoardComponent implements OnInit, OnDestroy {
     this._sudokuService.init();
     this.puzzle = this._sudokuService.puzzle;
     this.runningPuzzle = this._sudokuService.runningPuzzle;
-    this.clickedCell = '';
-    this.subscription = this._sudokuService.getClick().subscribe((event) => {
-      this.clickedCell = event.cellLoc;
-    });
   }
 
   clickButton(): void {
@@ -40,16 +35,17 @@ export class SudokuBoardComponent implements OnInit, OnDestroy {
     this._sudokuService.clearPencil();
   }
 
+  erase(): void {
+    this._sudokuService.erase();
+  }
+
   hint(): void {
-    if (this.clickedCell == '') return;
-    this._sudokuService.hint(this.clickedCell);
+    this._sudokuService.hint();
   }
 
   @HostListener('document:keyup', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent) {
-    if (this.clickedCell != '') {
-      this._sudokuService.handleKeyPress(this.clickedCell, event.key);
-    }
+    this._sudokuService.handleKeyPress(event.key);
   }
 
   ngOnDestroy() {

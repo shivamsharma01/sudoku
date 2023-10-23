@@ -1,25 +1,24 @@
 import { Observable, Subject } from 'rxjs';
 import { Injectable } from '@angular/core';
 import { NumEvent } from './num-event';
-import { ClickEvent } from './click-event';
-import { ClassEvent } from './class-event';
+import { ClassEvent, EventObject } from './class-event';
 
 @Injectable({ providedIn: 'root' })
 export class SudokuService {
   private numSubject: Subject<NumEvent> = new Subject<NumEvent>();
-  private clickSubject: Subject<ClickEvent> = new Subject<ClickEvent>();
-  private zoomSubject: Subject<ClassEvent> = new Subject<ClassEvent>();
+  private classSubject: Subject<ClassEvent> = new Subject<ClassEvent>();
   private helperSubject: Subject<boolean> = new Subject<boolean>();
   private solved: number[][];
-  private runningSolved: number[][];
   private unfilledCellsCount = 81;
   puzzle: number[][];
   runningPuzzle: number[][];
+  runningSolved: number[][];
   helperArr: boolean[][][];
   isPencilClicked: boolean;
   maxMistakes: number;
   countMistakes: number;
   hintsRemaining: number;
+  clickedCell: string;
 
   init(): void {
     this.hintsRemaining = 3;
@@ -127,18 +126,18 @@ export class SudokuService {
     i: number,
     j: number,
     num: number,
-    isZoom: boolean
+    emitEvent: boolean
   ) {
-    if (!isZoom) {
-      if (this.checkRow(sudoku, i, num, isZoom)) {
-        if (this.checkCol(sudoku, j, num, isZoom)) {
-          return this.checkBox(sudoku, i, j, num, isZoom);
+    if (!emitEvent) {
+      if (this.checkRow(sudoku, i, num, emitEvent)) {
+        if (this.checkCol(sudoku, j, num, emitEvent)) {
+          return this.checkBox(sudoku, i, j, num, emitEvent);
         }
       }
     } else {
-      let result = this.checkRow(sudoku, i, num, isZoom);
-      result = this.checkCol(sudoku, j, num, isZoom) && result;
-      result = this.checkBox(sudoku, i, j, num, isZoom) && result;
+      let result = this.checkRow(sudoku, i, num, emitEvent);
+      result = this.checkCol(sudoku, j, num, emitEvent) && result;
+      result = this.checkBox(sudoku, i, j, num, emitEvent) && result;
       return result;
     }
     return false;
@@ -148,11 +147,12 @@ export class SudokuService {
     sudoku: number[][],
     row: number,
     num: number,
-    isZoom: boolean
+    emitEvent: boolean
   ): boolean {
     for (let i = 0; i < 9; i++) {
       if (sudoku[row][i] == num) {
-        if (isZoom) this.sendZoom(row + ':' + i);
+        if (emitEvent && !this.isPencilClicked)
+          this.sendZoomEvent(row + ':' + i);
         return false;
       }
     }
@@ -163,11 +163,11 @@ export class SudokuService {
     sudoku: number[][],
     col: number,
     num: number,
-    isZoom: boolean
+    emitEvent: boolean
   ): boolean {
     for (let i = 0; i < 9; i++) {
       if (sudoku[i][col] == num) {
-        if (isZoom) this.sendZoom(i + ':' + col);
+        if (emitEvent) this.sendZoomEvent(i + ':' + col);
         return false;
       }
     }
@@ -179,14 +179,14 @@ export class SudokuService {
     row: number,
     col: number,
     num: number,
-    isZoom: boolean
+    emitEvent: boolean
   ): boolean {
     row = Math.floor(row / 3);
     col = Math.floor(col / 3);
     for (let i = row * 3; i < row * 3 + 3; i++) {
       for (let j = col * 3; j < col * 3 + 3; j++) {
         if (sudoku[i][j] == num) {
-          if (isZoom) this.sendZoom(i + ':' + j);
+          if (emitEvent) this.sendZoomEvent(i + ':' + j);
           return false;
         }
       }
@@ -194,62 +194,167 @@ export class SudokuService {
     return true;
   }
 
-  handleKeyPress(cellLoc: string, key: string): void {
-    if (this.maxMistakes == this.countMistakes) return;
-    let split = cellLoc.split(':');
+  handleKeyPress(key: string): void {
+    if (!this.clickedCell || this.maxMistakes == this.countMistakes) return;
+    let split = this.clickedCell.split(':');
     const row = +split[0];
     const col = +split[1];
     if (this.runningSolved[row][col] == this.solved[row][col]) return;
     if (key >= '1' && key <= '9') {
       const val = +key;
-      let font;
       if (!this.isPencilClicked) {
+        this.runningPuzzle[row][col] = val;
+        this.sendNumEvent(val);
         if (val != this.solved[row][col]) {
           this.countMistakes++;
-          font = 'red';
+          this.sendZoomEvent(this.clickedCell);
+          this.sendErrorEvent(val);
         } else {
-          font = 'blue';
           this.runningSolved[row][col] = val;
           this.unfilledCellsCount--;
           this.updateFill(row, col);
         }
-        this.sendNumber(cellLoc, font, this.isPencilClicked, val);
+        this.sendNumber(
+          this.isPencilClicked,
+          val,
+          val != this.solved[row][col]
+        );
       } else {
         const result = this.check(this.runningSolved, row, col, val, true);
-        if (result) this.sendNumber(cellLoc, font, this.isPencilClicked, val);
+        if (result) this.sendNumber(this.isPencilClicked, val, false);
       }
     } else if (key == 'Backspace') {
-      this.clearCell(cellLoc, this.isPencilClicked);
+      this.runningPuzzle[row][col] = 0;
+      this.clearCell(this.isPencilClicked);
     }
     if (this.unfilledCellsCount == 0) console.log('sudoku solved');
   }
 
-  sendNumber(cellLoc: string, font: string, isPencil: boolean, num: number) {
-    this.numSubject.next(new NumEvent(cellLoc, font, isPencil, num));
+  sendNumber(isPencil: boolean, num: number, isError: boolean) {
+    this.numSubject.next(new NumEvent(this.clickedCell, isPencil, num));
+    this.sendNumEvent(num);
+    if (isError) this.sendErrorEvent(num);
+    else this.sendClearErrorEvent();
   }
 
   getNumber(): Observable<NumEvent> {
     return this.numSubject.asObservable();
   }
 
-  clearCell(cellLoc: string, isPencil: boolean) {
-    this.numSubject.next(new NumEvent(cellLoc, '', isPencil, 0));
+  clearCell(isPencil: boolean) {
+    if (!isPencil) this.sendBackspaceEvent();
+    this.numSubject.next(new NumEvent(this.clickedCell, isPencil, 0));
   }
 
   sendClick(cellLoc: string) {
-    this.clickSubject.next(new ClickEvent(cellLoc));
+    this.clickedCell = cellLoc;
+    this.sendSelectEvent();
+    let split = this.clickedCell.split(':');
+    const row = +split[0];
+    const col = +split[1];
+    this.sendNumEvent(+this.runningPuzzle[row][col]);
+    const num = this.runningPuzzle[row][col];
+    if (this.solved[row][col] != num) this.sendErrorEvent(num);
   }
 
-  getClick(): Observable<ClickEvent> {
-    return this.clickSubject.asObservable();
+  sendBackspaceEvent() {
+    this.sendClassEvent('backspace');
   }
 
-  sendZoom(cellLoc: string) {
-    this.zoomSubject.next(new ClassEvent(cellLoc, 'zoom'));
+  sendClearErrorEvent() {
+    this.sendClassEvent('clear-error');
   }
 
-  getZoom(): Observable<ClassEvent> {
-    return this.zoomSubject.asObservable();
+  sendZoomEvent(cellLoc: string) {
+    this.sendClassEvent('zoom');
+  }
+
+  sendSelectEvent() {
+    this.sendClassEvent('select');
+  }
+
+  sendNumEvent(num: number) {
+    this.sendClassEvent('num', num);
+  }
+
+  sendErrorEvent(num: number) {
+    if (num == 0) return;
+    const arr = this.clickedCell.split(':');
+    let row = +arr[0];
+    let col = +arr[1];
+    const sudoku = this.runningPuzzle;
+    const errorLocSet = new Set<string>();
+    for (let i = 0; i < 9; i++) {
+      if (sudoku[row][i] == num) {
+        errorLocSet.add(row + ':' + i);
+      }
+    }
+
+    for (let i = 0; i < 9; i++) {
+      if (sudoku[i][col] == num) {
+        errorLocSet.add(i + ':' + col);
+      }
+    }
+
+    row = Math.floor(row / 3);
+    col = Math.floor(col / 3);
+    for (let i = row * 3; i < row * 3 + 3; i++) {
+      for (let j = col * 3; j < col * 3 + 3; j++) {
+        if (sudoku[i][j] == num) {
+          errorLocSet.add(i + ':' + j);
+        }
+      }
+    }
+    for (const value of errorLocSet) {
+      console.log(value);
+      this.sendClassEventToOther('error', value);
+    }
+  }
+
+  hasError(cellLoc: string): boolean {
+    const arr = cellLoc.split(':');
+    let row = +arr[0];
+    let col = +arr[1];
+    const sudoku = this.runningPuzzle;
+    const num = sudoku[row][col];
+
+    for (let i = 0; i < 9; i++) {
+      if (col != i && sudoku[row][i] == num) {
+        return true;
+      }
+    }
+    for (let i = 0; i < 9; i++) {
+      if (row != i && sudoku[i][col] == num) {
+        return true;
+      }
+    }
+
+    const rowStart = Math.floor(row / 3);
+    const colStart = Math.floor(col / 3);
+    for (let i = rowStart * 3; i < rowStart * 3 + 3; i++) {
+      for (let j = colStart * 3; j < colStart * 3 + 3; j++) {
+        if (sudoku[i][j] == num && !(i == row && j == col)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  sendClassEvent(event: string, num?: number) {
+    this.classSubject.next(
+      new ClassEvent(event, new EventObject(this.clickedCell, num))
+    );
+  }
+
+  sendClassEventToOther(event: string, cellLoc: string) {
+    this.classSubject.next(
+      new ClassEvent(event, new EventObject(cellLoc, null))
+    );
+  }
+
+  getClassEvent(): Observable<ClassEvent> {
+    return this.classSubject.asObservable();
   }
 
   getHelperArr(): Observable<boolean> {
@@ -305,14 +410,24 @@ export class SudokuService {
     this.helperSubject.next(true);
   }
 
-  hint(cellLoc: string) {
-    if (this.hintsRemaining == 0) return;
-    const arr = cellLoc.split(':');
+  erase() {
+    if (this.clickedCell == '') return;
+    const arr = this.clickedCell.split(':');
+    const row = +arr[0];
+    const col = +arr[1];
+    if (this.runningSolved[row][col] != 0) return;
+    this.runningSolved[row][col] = 0;
+    this.sendNumber(false, 0, false);
+  }
+
+  hint() {
+    if (this.clickedCell == '' || this.hintsRemaining == 0) return;
+    const arr = this.clickedCell.split(':');
     const row = +arr[0];
     const col = +arr[1];
     if (this.runningSolved[row][col] != 0) return;
     this.runningSolved[row][col] = this.solved[row][col];
-    this.sendNumber(cellLoc, 'blue', false, this.solved[row][col]);
+    this.sendNumber(false, this.solved[row][col], false);
     this.helperSubject.next(true);
     this.hintsRemaining--;
   }

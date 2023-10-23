@@ -11,31 +11,34 @@ export class SudokuCellComponent implements OnInit, OnDestroy {
   @Input() num: number;
   @Input() cellLocation: string;
   cellNum: number;
-  font: string;
-  clickState: boolean;
   helperArr: boolean[];
   subscription: Subscription[];
+  isError: boolean;
+  isNum: boolean;
+  isSelected: boolean;
   isZoom: boolean;
+  puzzle: number[][];
+  runningSolved: number[][];
+  row: number;
+  col: number;
 
   constructor(private _sudokuService: SudokuService) {}
 
   ngOnInit(): void {
-    this.clickState = false;
     this.cellNum = this.num;
-    this.font = 'black';
     this.isZoom = false;
     this.helperArr = [];
     this.subscription = [];
+    const arr = this.cellLocation.split(':');
+    this.row = +arr[0];
+    this.col = +arr[1];
     this.subscription.push(
       this._sudokuService.getNumber().subscribe((event) => {
-        const arr = this.cellLocation.split(':');
-        const row = +arr[0];
-        const col = +arr[1];
-        this.helperArr = this._sudokuService.helperArr[row][col];
+        this.puzzle = this._sudokuService.puzzle;
+        this.runningSolved = this._sudokuService.runningSolved;
+        this.helperArr = this._sudokuService.helperArr[this.row][this.col];
         if (this.cellLocation == event.cellLoc) {
           const num = event.num;
-          this.font = event.font;
-          if (this.font == 'red') this.isZoom = true;
           if (num == 0) {
             this.cellNum = 0;
             this.helperArr = <boolean[]>(
@@ -53,14 +56,31 @@ export class SudokuCellComponent implements OnInit, OnDestroy {
       })
     );
     this.subscription.push(
-      this._sudokuService.getClick().subscribe((event) => {
-        this.clickState = this.cellLocation == event.cellLoc;
-      })
-    );
-    this.subscription.push(
-      this._sudokuService.getZoom().subscribe((event) => {
-        if (this.cellLocation == event.cellLoc) {
-          this.isZoom = this.cellLocation == event.cellLoc;
+      this._sudokuService.getClassEvent().subscribe((event) => {
+        if (event.type == 'backspace' && this.cellNum != 0) {
+          this.isNum = false;
+          if (
+            this.isError &&
+            this.runningSolved[this.row][this.col] == this.cellNum
+          ) {
+            this.isError = this._sudokuService.hasError(this.cellLocation);
+          }
+        } else if (event.type == 'clear-error') {
+          this.isError = false;
+        } else if (event.type == 'error') {
+          const obj = event.obj;
+          this.isError = this.isError || obj.cellLoc == this.cellLocation;
+        } else if (event.type == 'num') {
+          const obj = event.obj;
+          this.isNum = obj.num == this.cellNum;
+          this.isZoom = this.isNum;
+          this.isError = this.isError && this.isNum;
+        } else if (event.type == 'select') {
+          const obj = event.obj;
+          this.isSelected = obj.cellLoc == this.cellLocation;
+        } else if (event.type == 'zoom') {
+          const obj = event.obj;
+          this.isZoom = obj.cellLoc == this.cellLocation;
         }
       })
     );
@@ -75,7 +95,6 @@ export class SudokuCellComponent implements OnInit, OnDestroy {
   }
 
   saveState(): void {
-    this.clickState = true;
     this._sudokuService.sendClick(this.cellLocation);
   }
 

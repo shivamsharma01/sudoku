@@ -1,8 +1,17 @@
 export class ClassEvent {
+  type: string;
+  obj: EventObject;
+  constructor(type: string, obj: EventObject) {
+    this.type = type;
+    this.obj = obj;
+  }
+}
+
+export class EventObject {
   cellLoc: string;
-  cls: string;
-  constructor(cellLoc: string, cls: string) {
+  num: number;
+  constructor(cellLoc: string, num: number) {
     this.cellLoc = cellLoc;
-    this.cls = cls;
+    this.num = num;
   }
 }
